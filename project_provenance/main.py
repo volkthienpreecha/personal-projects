@@ -2,8 +2,17 @@ from fastapi import FastAPI,File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from app_provenance.gradient_map_hash import image_hash_computation, hamming_distance
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["https://project-provenance.onrender.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
  
 
 @app.post("/compare") 
