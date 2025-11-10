@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Image Provenance Comparator</title>
+    <style>
+      :root {
+        --bg: linear-gradient(135deg, #e8ecf5 0%, #f8fafc 100%);
+        --card-bg: #ffffff;
+        --border: #e0e5ee;
+        --accent: #3056ff;
+        --accent-hover: #1f3ecd;
+        --text: #111827;
+        --subtle: #6b7280;
+        --radius: 16px;
+        --shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        width: min(520px, calc(100% - 40px));
+        padding: 40px 36px;
+        border: 1px solid var(--border);
+        transition: transform 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-3px);
+      }
+
+      h1 {
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+
+      p {
+        margin: 0 0 30px;
+        color: var(--subtle);
+        font-size: 0.95rem;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      input[type="file"] {
+        width: 100%;
+        padding: 14px;
+        border: 2px dashed var(--border);
+        border-radius: 10px;
+        background: #f9fafb;
+        cursor: pointer;
+        transition: border-color 0.2s ease;
+      }
+
+      input[type="file"]:hover {
+        border-color: var(--accent);
+      }
+
+      button {
+        margin-top: 32px;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent);
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.1s ease;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .progress {
+        height: 4px;
+        width: 0%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.6s ease;
+      }
+
+      .progress.visible {
+        width: 100%;
+      }
+
+      .result {
+        margin-top: 28px;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #f8fafc;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        display: none;
+      }
+
+      .result.visible {
+        display: block;
+      }
+
+      .verdict {
+        font-weight: 600;
+        margin-top: 18px;
+        text-align: center;
+      }
+
+      .verdict span {
+        padding: 6px 10px;
+        border-radius: 8px;
+      }
+
+      .verdict.ok span {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .verdict.changed span {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Image Provenance Comparator</h1>
+      <p>Compare two images to detect integrity changes or tampering.</p>
+
+      <div>
+        <label for="file1">First image</label>
+        <input type="file" id="file1" accept="image/*" />
+      </div>
+      <div style="margin-top:20px;">
+        <label for="file2">Second image</label>
+        <input type="file" id="file2" accept="image/*" />
+      </div>
+
+      <div class="progress" id="progress"></div>
+      <button id="compareBtn">Compare Images</button>
+
+      <div class="verdict" id="verdict"></div>
+      <div class="result" id="output"></div>
+    </main>
+
+    <script>
+      const button = document.getElementById("compareBtn");
+      const progress = document.getElementById("progress");
+      const output = document.getElementById("output");
+      const verdictBox = document.getElementById("verdict");
+
+      button.addEventListener("click", async () => {
+        const file1 = document.getElementById("file1").files[0];
+        const file2 = document.getElementById("file2").files[0];
+
+        if (!file1 || !file2) {
+          verdictBox.className = "verdict changed";
+          verdictBox.innerHTML = "<span>Please select both images.</span>";
+          output.style.display = "none";
+          return;
+        }
+
+        const form = new FormData();
+        form.append("file1", file1);
+        form.append("file2", file2);
+
+        button.disabled = true;
+        button.textContent = "Comparing...";
+        progress.classList.add("visible");
+        verdictBox.textContent = "";
+        output.style.display = "none";
+
+        try {
+          const response = await fetch("http://127.0.0.1:8000/compare", {
+            method: "POST",
+            body: form,
+          });
+
+          if (!response.ok) throw new Error(`Server error ${response.status}`);
+
+          const result = await response.json();
+          output.textContent = JSON.stringify(result, null, 2);
+          output.classList.add("visible");
+
+          if (result.hamming_distance === 0) {
+            verdictBox.className = "verdict ok";
+            verdictBox.innerHTML = "<span>Images are identical</span>";
+          } else {
+            verdictBox.className = "verdict changed";
+            verdictBox.innerHTML = `<span>Image changed (distance ${result.hamming_distance})</span>`;
+          }
+        } catch (err) {
+          verdictBox.className = "verdict changed";
+          verdictBox.innerHTML = `<span>Comparison failed: ${err.message}</span>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Compare Images";
+          progress.classList.remove("visible");
+        }
+      });
+    </script>
+  </body>
+</html>
