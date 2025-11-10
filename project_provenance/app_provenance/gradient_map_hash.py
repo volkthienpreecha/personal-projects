@@ -3,9 +3,6 @@ import hashlib
 import cv2 
 import os
 
-path1 = r"C:\Users\volko\Downloads\image_for_provenance.png"
-path2 = r"C:\Users\volko\Downloads\image_for_provenance.png"
-
 def image_hash_computation(image_path):
 
     if isinstance(image_path, (bytes,bytearray)):
@@ -45,12 +42,9 @@ def hamming_distance(hash1, hash2):
 
     return sum((x ^ y).bit_count() for x,y in zip(b1, b2))
 
-hash1 = image_hash_computation(path1)
-hash2 = image_hash_computation(path2)
-
-dist = hamming_distance(hash1,hash2)
-
-if dist == 0:
-    print("Identical image")
-else:
-    print("Image has been changed")
+if __name__ == "__main__":
+    path1 = r"C:\Users\volko\Downloads\image_for_provenance.png"
+    path2 = r"C:\Users\volko\Downloads\image_for_provenance.png"
+    hash1 = image_hash_computation(path1)
+    hash2 = image_hash_computation(path2)
+    print("Hamming distance:", hamming_distance(hash1, hash2))
