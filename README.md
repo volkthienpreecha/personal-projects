@@ -1,1 +1,1 @@
-Hello! This is my repo for doing fun stuff! Welcome!
+Welcome to my repo where I build things I believe are fun and meaningful to society. 
